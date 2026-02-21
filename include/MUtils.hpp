@@ -97,6 +97,24 @@ namespace MUtils {
 
         return M;
     }
+
+    /// @brief Direct product (term wise)
+    /// @param A 
+    /// @param B 
+    /// @return 
+    Matrix muld(const Matrix& A, const Matrix& B) {
+        assert(A.R == B.R && A.C == B.C && "Mismatching matrix dimensions for direct product!");
+        Matrix M{A.R, A.C};
+
+        for (int i = 0; i < A.R; i++) {
+            for (int j = 0; j < A.C; j++) {
+                M.atr(i, j) = A.atc(i, j) * B.atc(i, j);
+            }
+        }
+
+        return M;
+    }
+
     /// @brief A - B
     /// @param A 
     /// @param B 
