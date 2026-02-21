@@ -53,6 +53,22 @@ namespace MUtils {
         return M;
     }
 
+    // A * B^T
+    Matrix mult(const Matrix& A, const Matrix& B) {
+        assert(A.C == B.C && "Mismatching matrix dimensions for multiplication!");
+        Matrix M{A.R, B.C};
+
+        for (int i = 0; i < A.R; i++) {
+            for (int k = 0; k < B.R; k++) {
+                for (int j = 0; j < A.C; j++) { // A.C == B.C
+                    M.atr(i, k) += A.atc(i, j) * B.atc(k,j);
+                }
+            }
+        }
+
+        return M;
+    }
+
     // A^T * B
     Matrix tmul(const Matrix& A, const Matrix& B) {
         assert(A.R == B.R && "Mismatching matrix dimensions for multiplication!");
