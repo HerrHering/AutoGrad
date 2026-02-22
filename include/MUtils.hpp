@@ -40,11 +40,11 @@ namespace MUtils {
         const int R, C;
     };
 
-    /// @brief Column vector
+    /// @brief Row vector
     struct Vector {
         Vector(std::vector<float>&& source) : dim(static_cast<int>(source.size())), data{std::move(source), 1, static_cast<int>(source.size())} {}
         explicit Vector(Matrix&& vector_as_matrix) : Vector(std::move(vector_as_matrix.data)) {}
-        Vector(int dim) : dim(dim), data(dim, 0.0f) {}
+        Vector(int dim) : dim(dim), data(1, dim) {}
         inline float& atr(int i) {
             return data.atr(0, i);
         }
@@ -55,7 +55,7 @@ namespace MUtils {
         Matrix data;
     };
 
-    Matrix mul(const Matrix& A, const Matrix& B) {
+    inline Matrix mul(const Matrix& A, const Matrix& B) {
         assert(A.C == B.R && "Mismatching matrix dimensions for multiplication!");
         Matrix M{A.R, B.C};
 
@@ -71,7 +71,7 @@ namespace MUtils {
     }
 
     // A * B^T
-    Matrix mult(const Matrix& A, const Matrix& B) {
+    inline Matrix mult(const Matrix& A, const Matrix& B) {
         assert(A.C == B.C && "Mismatching matrix dimensions for multiplication!");
         Matrix M{A.R, B.R};
 
@@ -87,7 +87,7 @@ namespace MUtils {
     }
 
     // A^T * B
-    Matrix tmul(const Matrix& A, const Matrix& B) {
+    inline Matrix tmul(const Matrix& A, const Matrix& B) {
         assert(A.R == B.R && "Mismatching matrix dimensions for multiplication!");
         Matrix M{A.C, B.C};
 
@@ -102,7 +102,7 @@ namespace MUtils {
         return M;
     }
 
-    Matrix add(const Matrix& A, const Matrix& B) {
+    inline Matrix add(const Matrix& A, const Matrix& B) {
         assert(A.R == B.R && A.C == B.C && "Mismatching matrix dimensions for addition!");
         Matrix M{A.R, A.C};
 
@@ -119,7 +119,7 @@ namespace MUtils {
     /// @param A 
     /// @param B 
     /// @return 
-    Matrix muld(const Matrix& A, const Matrix& B) {
+    inline Matrix muld(const Matrix& A, const Matrix& B) {
         assert(A.R == B.R && A.C == B.C && "Mismatching matrix dimensions for direct product!");
         Matrix M{A.R, A.C};
 
@@ -136,7 +136,7 @@ namespace MUtils {
     /// @param A 
     /// @param B 
     /// @return 
-    Matrix sub(const Matrix& A, const Matrix& B) {
+    inline Matrix sub(const Matrix& A, const Matrix& B) {
         assert(A.R == B.R && A.C == B.C && "Mismatching matrix dimensions for subtraction!");
         Matrix M{A.R, A.C};
 
@@ -149,7 +149,7 @@ namespace MUtils {
         return M;
     }
 
-    Matrix scale(float scale, const Matrix& A) {
+    inline Matrix scale(float scale, const Matrix& A) {
         Matrix M{A.R, A.C};
 
         for (int i = 0; i < A.R; i++) {
@@ -161,7 +161,7 @@ namespace MUtils {
         return M;
     }
 
-    std::string to_string(const Matrix& m) {
+    inline std::string to_string(const Matrix& m) {
         std::ostringstream oss;
         oss << "\n";
         for (int r = 0; r < m.R; r++) {
@@ -175,14 +175,14 @@ namespace MUtils {
         return oss.str();
     }
 
-    Matrix operator*(const Matrix& A, const Matrix& B) { return mul(A, B); }
-    Matrix operator*(float s, const Matrix& A) { return scale(s, A); }
-    Matrix operator*(const Matrix& A, float s) { return scale(s, A); }
-    Matrix operator+(const Matrix& A, const Matrix& B) { return add(A, B); }
-    Matrix operator-(const Matrix& A, const Matrix& B) { return sub(A, B); }
+    inline Matrix operator*(const Matrix& A, const Matrix& B) { return mul(A, B); }
+    inline Matrix operator*(float s, const Matrix& A) { return scale(s, A); }
+    inline Matrix operator*(const Matrix& A, float s) { return scale(s, A); }
+    inline Matrix operator+(const Matrix& A, const Matrix& B) { return add(A, B); }
+    inline Matrix operator-(const Matrix& A, const Matrix& B) { return sub(A, B); }
 
     /// @brief A*v
-    Vector mul(const Matrix& A, const Vector& v) {
+    inline Vector mul(const Matrix& A, const Vector& v) {
         assert(A.C == v.dim && "Mismatching matrix dimensions for multiplication!");
         Vector R{A.R};
 
@@ -193,5 +193,16 @@ namespace MUtils {
         }
 
         return R;
+    }
+
+    inline Vector add(const Vector& a, const Vector& b) {
+        assert(a.dim == b.dim && "Mismatching vector dimensions for addition!");
+        Vector c{a.dim};
+
+        for (int i = 0; i < a.dim; i++) {
+            c.atr(i) = a.atc(i) + b.atc(i);
+        }
+
+        return c;
     }
 }

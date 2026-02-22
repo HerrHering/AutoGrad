@@ -67,3 +67,7 @@ endif()
 
 # # Include raylib headers for our target
 # target_include_directories(raylib_test_project PRIVATE ${raylib_SOURCE_DIR}/src)
+
+include(CTest)
+enable_testing()
+add_subdirectory(tests)
