@@ -12,6 +12,7 @@ namespace MUtils {
     struct Matrix {
         Matrix(std::vector<float>&& source, int r, int c) : R(r), C(c) {
             // Check dimension
+#ifndef NDEBUG
             if (R <= 0 || C <= 0) {
                 throw std::invalid_argument(
                     std::format("Matrix can not have negative dimensions. R: {} C: {}", R, C)
@@ -22,6 +23,7 @@ namespace MUtils {
                     std::format("Matrix size mismatch. Row: {} Col: {} Expected: {} Data: {}", R, C, R*C, source.size())
                 );
             }
+#endif
             // Move data :)
             data = std::move(source);
         }
@@ -36,6 +38,21 @@ namespace MUtils {
         }
         std::vector<float> data;
         const int R, C;
+    };
+
+    /// @brief Column vector
+    struct Vector {
+        Vector(std::vector<float>&& source) : dim(static_cast<int>(source.size())), data{std::move(source), 1, static_cast<int>(source.size())} {}
+        explicit Vector(Matrix&& vector_as_matrix) : Vector(std::move(vector_as_matrix.data)) {}
+        Vector(int dim) : dim(dim), data(dim, 0.0f) {}
+        inline float& atr(int i) {
+            return data.atr(0, i);
+        }
+        inline float atc(int i) const {
+            return data.atc(0, i);
+        }
+        const int dim;
+        Matrix data;
     };
 
     Matrix mul(const Matrix& A, const Matrix& B) {
@@ -56,7 +73,7 @@ namespace MUtils {
     // A * B^T
     Matrix mult(const Matrix& A, const Matrix& B) {
         assert(A.C == B.C && "Mismatching matrix dimensions for multiplication!");
-        Matrix M{A.R, B.C};
+        Matrix M{A.R, B.R};
 
         for (int i = 0; i < A.R; i++) {
             for (int k = 0; k < B.R; k++) {
@@ -163,4 +180,18 @@ namespace MUtils {
     Matrix operator*(const Matrix& A, float s) { return scale(s, A); }
     Matrix operator+(const Matrix& A, const Matrix& B) { return add(A, B); }
     Matrix operator-(const Matrix& A, const Matrix& B) { return sub(A, B); }
+
+    /// @brief A*v
+    Vector mul(const Matrix& A, const Vector& v) {
+        assert(A.C == v.dim && "Mismatching matrix dimensions for multiplication!");
+        Vector R{A.R};
+
+        for (int i = 0; i < A.R; i++) {
+            for (int j = 0; j < v.dim; j++) { // A.C == v.dim
+                R.atr(i) += A.atc(i, j) * v.atc(j);
+            }
+        }
+
+        return R;
+    }
 }
