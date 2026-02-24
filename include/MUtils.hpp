@@ -40,16 +40,16 @@ namespace MUtils {
         const int R, C;
     };
 
-    /// @brief Row vector
+    /// @brief Column vector
     struct Vector {
         Vector(std::vector<float>&& source) : dim(static_cast<int>(source.size())), data{std::move(source), 1, static_cast<int>(source.size())} {}
         explicit Vector(Matrix&& vector_as_matrix) : Vector(std::move(vector_as_matrix.data)) {}
-        Vector(int dim) : dim(dim), data(1, dim) {}
+        Vector(int dim) : dim(dim), data(dim, 1) {}
         inline float& atr(int i) {
-            return data.atr(0, i);
+            return data.atr(i, 0);
         }
         inline float atc(int i) const {
-            return data.atc(0, i);
+            return data.atc(i, 0);
         }
         const int dim;
         Matrix data;
@@ -183,7 +183,7 @@ namespace MUtils {
 
     /// @brief A*v
     inline Vector mul(const Matrix& A, const Vector& v) {
-        assert(A.C == v.dim && "Mismatching matrix dimensions for multiplication!");
+        assert(A.C == v.dim && "Mismatching matrix-vector dimensions for multiplication!");
         Vector R{A.R};
 
         for (int i = 0; i < A.R; i++) {
@@ -193,6 +193,19 @@ namespace MUtils {
         }
 
         return R;
+    }
+
+    /// @brief Outer product of two vectors a*b^T 
+    inline Matrix mulo(const Vector& a, const Vector& b) {
+        Matrix M{a.dim, b.dim};
+
+        for (int i = 0; i < a.dim; i++) {
+            for (int j = 0; j < b.dim; j++) {
+                M.atr(i, j) = a.atc(i) * b.atc(j);
+            }
+        }
+
+        return M;
     }
 
     inline Vector add(const Vector& a, const Vector& b) {
