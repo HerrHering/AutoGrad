@@ -91,7 +91,7 @@ namespace NN {
             // dL/da' = (dL/da * da/dz) * dz/da' <- W = W^T * delta
             #pragma message("tmul() is not implemented for vector arguments yet. This might be slower.")
             return layer_backward_res{
-                .dL_da = MUtils::tmul(weights, delta.data),
+                .dL_da = Vector(MUtils::tmul(weights, delta.data)),
                 .d_weights = MUtils::mulo(delta, last_input),
                 .d_biases = delta
             };
@@ -133,8 +133,8 @@ namespace NN {
                         layer_backward_res grads = layer.backward(loss_grad);
 
                         // Update parameters
-                        layer.weights -= learning_rate * grads.d_weights;
-                        layer.biases -= learning_rate * grads.d_biases;
+                        layer.weights = layer.weights - learning_rate * grads.d_weights;
+                        layer.biases = layer.biases - learning_rate * grads.d_biases;
                         // Propagate error
                         loss_grad = std::move(grads.dL_da);
                     }()

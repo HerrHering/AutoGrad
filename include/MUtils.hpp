@@ -47,7 +47,7 @@ namespace MUtils {
 
     /// @brief Column vector
     struct Vector {
-        Vector(std::vector<float>&& source) : dim(static_cast<int>(source.size())), data{std::move(source), 1, static_cast<int>(source.size())} {
+        Vector(std::vector<float>&& source) : dim(static_cast<int>(source.size())), data{std::move(source), static_cast<int>(source.size()), 1} {
             static_assert(std::is_move_assignable_v<Vector>);
             static_assert(std::is_move_constructible_v<Vector>);
             static_assert(std::is_copy_assignable_v<Vector>);
@@ -117,10 +117,8 @@ namespace MUtils {
         assert(A.R == B.R && A.C == B.C && "Mismatching matrix dimensions for addition!");
         Matrix M{A.R, A.C};
 
-        for (int i = 0; i < A.R; i++) {
-            for (int j = 0; j < A.C; j++) {
-                M.atr(i, j) = A.atc(i, j) + B.atc(i, j);
-            }
+        for (int i = 0; i < (int)A.data.size(); i++) {
+            M.data[i] = A.data[i] + B.data[i];
         }
 
         return M;
@@ -149,10 +147,8 @@ namespace MUtils {
         assert(A.R == B.R && A.C == B.C && "Mismatching matrix dimensions for subtraction!");
         Matrix M{A.R, A.C};
 
-        for (int i = 0; i < A.R; i++) {
-            for (int j = 0; j < A.C; j++) {
-                M.atr(i, j) = A.atc(i, j) - B.atc(i, j);
-            }
+        for (int i = 0; i < (int)A.data.size(); i++) {
+            M.data[i] = A.data[i] - B.data[i];
         }
 
         return M;
@@ -216,14 +212,10 @@ namespace MUtils {
     }
 
     inline Vector add(const Vector& a, const Vector& b) {
-        assert(a.dim == b.dim && "Mismatching vector dimensions for addition!");
-        Vector c{a.dim};
-
-        for (int i = 0; i < a.dim; i++) {
-            c.atr(i) = a.atc(i) + b.atc(i);
-        }
-
-        return c;
+        return Vector(add(a.data, b.data));
+    }
+    inline Vector sub(const Vector& a, const Vector& b) {
+        return Vector(sub(a.data, b.data));
     }
 
     inline Vector muld(const Vector& a, const Vector& b) {
@@ -234,6 +226,7 @@ namespace MUtils {
     }
 
     inline Vector operator+(const Vector& a, const Vector& b) { return add(a,b); }
+    inline Vector operator-(const Vector& a, const Vector& b) { return sub(a, b); }
     inline Vector operator*(const Matrix& M, const Vector& v) { return mul(M,v); }
     inline Vector operator*(float scaler, const Vector& v) { return scale(scaler,v); }
 }
