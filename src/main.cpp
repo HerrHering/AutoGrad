@@ -8,6 +8,7 @@ using namespace NN;
 #include <fstream>
 #include <string>
 #include <iostream>
+#include <colors.hpp>
 
 // Data loading
 struct IrisRecord {
@@ -45,9 +46,9 @@ int main() {
     std::cout << "Release mode enabled." << std::endl;
 #endif
 
-    // input(4) -> layer1(4) -> layer2(3)
-    Layer<ActivationType::ReLU> layer1{NNUtils::initWeigths(5, 4, ActivationType::ReLU), Vector(5)};
-    Layer<ActivationType::ReLU> layer2{NNUtils::initWeigths(3, 5, ActivationType::Sigmoid), Vector(3)};
+    // input(4) -> layer1(5) -> layer2(5) -> layer3(3)
+    Layer<ActivationType::ReLU> layer1{NNUtils::initWeigths(10, 4, ActivationType::ReLU), Vector(10)};
+    Layer<ActivationType::Sigmoid> layer2{NNUtils::initWeigths(3, 10, ActivationType::Sigmoid), Vector(3)};
     Network network(std::move(layer1), std::move(layer2));
 
     auto flower_data = loadIris("assets/iris.csv");
@@ -59,14 +60,19 @@ int main() {
 
     // 80% train
     int train_size = (int)((double)flower_data.size() * 0.8);
+    std::cout << YELLOW << "Data set size: " << flower_data.size() << "\n" << RESET;
     std::vector<IrisRecord> train_data(flower_data.begin(), flower_data.begin() + train_size);
+    std::cout << YELLOW << "Train set size: " << train_data.size() << "\n" << RESET;
     std::vector<IrisRecord> test_data(flower_data.begin() + train_size, flower_data.end());
 
     // Training loop
-    for (int epoch = 0; epoch < 1000; epoch++) {
+    for (int epoch = 0; epoch < 2000; epoch++) {
         double total_loss = 0;
+        // Important: Shuffle data to help generalization
+        std::shuffle(train_data.begin(), train_data.end(), g);
+
         // Shuffle data to avoid distribution bias
-        for (auto& sample : train_data) {
+        for (const auto& sample : train_data) {
             // Forward
             auto prediction = network.forward(sample.features);
 
@@ -89,5 +95,15 @@ int main() {
     }
 
     // Print predictions
-    
+    for (const auto& sample : test_data) {
+        auto prediction = network.forward(sample.features);
+        
+        // Get the index of the highest value (Argmax)
+        int predicted_label = std::distance(prediction.data.data.begin(), 
+                                            std::max_element(prediction.data.data.begin(), prediction.data.data.end()));
+        int true_label = std::distance(sample.label.data.data.begin(), 
+                                            std::max_element(sample.label.data.data.begin(), sample.label.data.data.end()));
+        
+        std::cout << (true_label == predicted_label ? GREEN : RED)  << "True label: " << true_label << ", Predicted: " << predicted_label << "\n" << RESET;
+    }
 }

@@ -18,7 +18,7 @@ namespace NN {
             // Xavier Initialization: sqrt(2 / (fan_in + fan_out))
             float stddev;
             if (type == ActivationType::ReLU) {
-                stddev = std::sqrt(1.0f / (float)c);
+                stddev = std::sqrt(2.0f / (float)c);
             }
             else {
                 stddev = std::sqrt(2.0f / (float)(r + c));
