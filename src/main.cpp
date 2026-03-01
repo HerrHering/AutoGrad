@@ -11,37 +11,38 @@ using namespace NN;
 #include <colors.hpp>
 
 // Data loading
-struct IrisRecord {
-    Vector features{4};
-    Vector label{3}; // 0, 1, or 2
+struct WdbcRecord {
+    Vector features{30};
+    Vector label{2}; // 0 or 1
 };
 // Simple parser logic
-std::vector<IrisRecord> loadIris(std::string filename) {
-    std::vector<IrisRecord> data;
+std::vector<WdbcRecord> loadWdcb(std::string filename) {
+    std::vector<WdbcRecord> data;
     std::ifstream file(filename);
     std::string line;
     
-    std::getline(file, line); // Skip header
     while (std::getline(file, line)) {
         std::stringstream ss(line);
         std::string val;
-        IrisRecord record;
-        for (int i = 0; i < 4; ++i) {
+        WdbcRecord record;
+        std::getline(ss, val, ','); // ID
+        std::getline(ss, val, ','); // Label
+        if (val == "M") record.label.atr(0) = 1.0f; // M
+        else record.label.atr(1) = 1.0f; // B
+        // Features
+        for (int i = 0; i < 30; ++i) {
             std::getline(ss, val, ',');
             record.features.atr(i) = std::stof(val);
         }
-        std::getline(ss, val, ',');
-        if (val == "\"Setosa\"") record.label.atr(0) = 1.0f;
-        else if (val == "\"Versicolor\"") record.label.atr(1) = 1.0f;
-        else record.label.atr(2) = 1.0f;
         data.push_back(record);
     }
     return data;
 }
-void model_scores(const std::vector<IrisRecord>& test_data, auto network) {
+void model_scores(const std::vector<WdbcRecord>& test_data, auto network) {
+    const int table_size = 2;
     // Row: True
     // Column: Predicted
-    int confusion_matrix[3][3] = {0};
+    int confusion_matrix[table_size][table_size] = {0};
     for (const auto& sample : test_data) {
         auto prediction = network.forward(sample.features);
         
@@ -51,23 +52,22 @@ void model_scores(const std::vector<IrisRecord>& test_data, auto network) {
         int true_label = std::distance(sample.label.data.data.begin(), 
                                             std::max_element(sample.label.data.data.begin(), sample.label.data.data.end()));
         
-        // std::cout << (true_label == predicted_label ? GREEN : RED)  << "True label: " << true_label << ", Predicted: " << predicted_label << "\n" << RESET;
         confusion_matrix[true_label][predicted_label]++;
     }
     // Calculate Metrics
     int total_correct = 0;
-    for(int i=0; i<3; ++i) total_correct += confusion_matrix[i][i];
+    for(int i=0; i<table_size; ++i) total_correct += confusion_matrix[i][i];
 
     std::cout << "\n--- Evaluation ---\n";
     std::cout << RED << "Overall Accuracy: " << (double)total_correct / test_data.size() * 100.0 << "%\n\n" << RESET;
 
-    for (int i = 0; i < 3; ++i) {
-        std::string name = (i == 0) ? std::string(MAGENTA).append("Setosa    ") : (i == 1) ? std::string(BLUE).append("Versicolor") : std::string(GREEN).append("Virginica ");
+    for (int i = 0; i < table_size; ++i) {
+        std::string name = (i == 0) ? std::string(MAGENTA).append("bening   ") : std::string(BLUE).append("malignant");
         
         double TP = confusion_matrix[i][i];
         double FN = 0, FP = 0, TN = 0;
 
-        for (int j = 0; j < 3; ++j) {
+        for (int j = 0; j < table_size; ++j) {
             if (i != j) {
                 FN += confusion_matrix[i][j]; // Actual i, but predicted j
                 FP += confusion_matrix[j][i]; // Actual j, but predicted i
@@ -83,6 +83,37 @@ void model_scores(const std::vector<IrisRecord>& test_data, auto network) {
         std::cout << name << " | TPR: " << TPR << " | TNR: " << TNR << "\n";
     }
 }
+void minMaxScale(std::vector<WdbcRecord>& data) {
+    if (data.empty()) return;
+
+    int num_features = 30;
+    std::vector<float> min_vals(num_features, std::numeric_limits<float>::max());
+    std::vector<float> max_vals(num_features, std::numeric_limits<float>::lowest());
+
+    // 1. Pass through the data to find Min and Max for each feature
+    for (const auto& record : data) {
+        for (int i = 0; i < num_features; ++i) {
+            float val = record.features.atc(i); // Using your atc() const accessor
+            if (val < min_vals[i]) min_vals[i] = val;
+            if (val > max_vals[i]) max_vals[i] = val;
+        }
+    }
+
+    // 2. Pass through the data again to scale every value
+    for (auto& record : data) {
+        for (int i = 0; i < num_features; ++i) {
+            float range = max_vals[i] - min_vals[i];
+            
+            // Handle edge case: if min == max, range is 0. Set feature to 0.
+            if (range > 0.0f) {
+                float original = record.features.atc(i);
+                record.features.atr(i) = (original - min_vals[i]) / range;
+            } else {
+                record.features.atr(i) = 0.0f; 
+            }
+        }
+    }
+}
 
 int main() {
 #ifndef NDEBUG
@@ -91,28 +122,29 @@ int main() {
     std::cout << "Release mode enabled." << std::endl;
 #endif
 
-    // input(4) -> layer1(5) -> layer2(5) -> layer3(3)
     Network network{
-        make_layer<ActivationType::ReLU>(4, 15),
-        make_layer<ActivationType::Sigmoid>(15, 3),
+        make_layer<ActivationType::ReLU>(30, 16),
+        make_layer<ActivationType::ReLU>(16, 16),
+        make_layer<ActivationType::Sigmoid>(16, 2)
     };
 
-    auto flower_data = loadIris("assets/iris.csv");
+    auto wdbc_data = loadWdcb("assets/wdbc.data");
+    minMaxScale(wdbc_data);
 
     // Split data
     std::random_device rd{};
     std::mt19937 g(rd());
     // I dont trust shuffling lowkey
-    std::shuffle(flower_data.begin(), flower_data.end(), g);
-    std::shuffle(flower_data.begin(), flower_data.end(), g);
-    std::shuffle(flower_data.begin(), flower_data.end(), g);
+    std::shuffle(wdbc_data.begin(), wdbc_data.end(), g);
+    std::shuffle(wdbc_data.begin(), wdbc_data.end(), g);
+    std::shuffle(wdbc_data.begin(), wdbc_data.end(), g);
 
     // 80% train
-    int train_size = (int)((double)flower_data.size() * 0.8);
-    std::cout << YELLOW << "Data set size: " << flower_data.size() << "\n" << RESET;
-    std::vector<IrisRecord> train_data(flower_data.begin(), flower_data.begin() + train_size);
+    int train_size = (int)((double)wdbc_data.size() * 0.8);
+    std::cout << YELLOW << "Data set size: " << wdbc_data.size() << "\n" << RESET;
+    std::vector<WdbcRecord> train_data(wdbc_data.begin(), wdbc_data.begin() + train_size);
     std::cout << YELLOW << "Train set size: " << train_data.size() << "\n" << RESET;
-    std::vector<IrisRecord> test_data(flower_data.begin() + train_size, flower_data.end());
+    std::vector<WdbcRecord> test_data(wdbc_data.begin() + train_size, wdbc_data.end());
 
     // Training loop
     for (int epoch = 0; epoch < 1000; epoch++) {
