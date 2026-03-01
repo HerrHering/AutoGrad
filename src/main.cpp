@@ -38,6 +38,51 @@ std::vector<IrisRecord> loadIris(std::string filename) {
     }
     return data;
 }
+void model_scores(const std::vector<IrisRecord>& test_data, auto network) {
+    // Row: True
+    // Column: Predicted
+    int confusion_matrix[3][3] = {0};
+    for (const auto& sample : test_data) {
+        auto prediction = network.forward(sample.features);
+        
+        // Get the index of the highest value (Argmax)
+        int predicted_label = std::distance(prediction.data.data.begin(), 
+                                            std::max_element(prediction.data.data.begin(), prediction.data.data.end()));
+        int true_label = std::distance(sample.label.data.data.begin(), 
+                                            std::max_element(sample.label.data.data.begin(), sample.label.data.data.end()));
+        
+        // std::cout << (true_label == predicted_label ? GREEN : RED)  << "True label: " << true_label << ", Predicted: " << predicted_label << "\n" << RESET;
+        confusion_matrix[true_label][predicted_label]++;
+    }
+    // Calculate Metrics
+    int total_correct = 0;
+    for(int i=0; i<3; ++i) total_correct += confusion_matrix[i][i];
+
+    std::cout << "\n--- Evaluation ---\n";
+    std::cout << RED << "Overall Accuracy: " << (double)total_correct / test_data.size() * 100.0 << "%\n\n" << RESET;
+
+    for (int i = 0; i < 3; ++i) {
+        std::string name = (i == 0) ? std::string(MAGENTA).append("Setosa    ") : (i == 1) ? std::string(BLUE).append("Versicolor") : std::string(GREEN).append("Virginica ");
+        
+        double TP = confusion_matrix[i][i];
+        double FN = 0, FP = 0, TN = 0;
+
+        for (int j = 0; j < 3; ++j) {
+            if (i != j) {
+                FN += confusion_matrix[i][j]; // Actual i, but predicted j
+                FP += confusion_matrix[j][i]; // Actual j, but predicted i
+            }
+        }
+        
+        // TN is everything else
+        TN = test_data.size() - (TP + FN + FP);
+
+        double TPR = (TP + FN > 0) ? (TP / (TP + FN)) : 0; // Sensitivity
+        double TNR = (TN + FP > 0) ? (TN / (TN + FP)) : 0; // Specificity
+
+        std::cout << name << " | TPR: " << TPR << " | TNR: " << TNR << "\n";
+    }
+}
 
 int main() {
 #ifndef NDEBUG
@@ -57,6 +102,9 @@ int main() {
     // Split data
     std::random_device rd{};
     std::mt19937 g(rd());
+    // I dont trust shuffling lowkey
+    std::shuffle(flower_data.begin(), flower_data.end(), g);
+    std::shuffle(flower_data.begin(), flower_data.end(), g);
     std::shuffle(flower_data.begin(), flower_data.end(), g);
 
     // 80% train
@@ -96,15 +144,5 @@ int main() {
     }
 
     // Print predictions
-    for (const auto& sample : test_data) {
-        auto prediction = network.forward(sample.features);
-        
-        // Get the index of the highest value (Argmax)
-        int predicted_label = std::distance(prediction.data.data.begin(), 
-                                            std::max_element(prediction.data.data.begin(), prediction.data.data.end()));
-        int true_label = std::distance(sample.label.data.data.begin(), 
-                                            std::max_element(sample.label.data.data.begin(), sample.label.data.data.end()));
-        
-        std::cout << (true_label == predicted_label ? GREEN : RED)  << "True label: " << true_label << ", Predicted: " << predicted_label << "\n" << RESET;
-    }
+    model_scores(test_data, network);
 }
