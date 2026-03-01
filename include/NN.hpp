@@ -97,6 +97,13 @@ namespace NN {
             };
         }
     };
+    template <ActivationType Type>
+    Layer<Type> make_layer(int input, int output) {
+        return Layer<Type>{
+            NNUtils::initWeigths(output, input, Type),
+            Vector(output)
+        };
+    }
 
     template <typename... Layers>
     struct Network {

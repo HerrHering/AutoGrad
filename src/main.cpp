@@ -47,9 +47,10 @@ int main() {
 #endif
 
     // input(4) -> layer1(5) -> layer2(5) -> layer3(3)
-    Layer<ActivationType::ReLU> layer1{NNUtils::initWeigths(10, 4, ActivationType::ReLU), Vector(10)};
-    Layer<ActivationType::Sigmoid> layer2{NNUtils::initWeigths(3, 10, ActivationType::Sigmoid), Vector(3)};
-    Network network(std::move(layer1), std::move(layer2));
+    Network network{
+        make_layer<ActivationType::ReLU>(4, 15),
+        make_layer<ActivationType::Sigmoid>(15, 3),
+    };
 
     auto flower_data = loadIris("assets/iris.csv");
 
@@ -66,7 +67,7 @@ int main() {
     std::vector<IrisRecord> test_data(flower_data.begin() + train_size, flower_data.end());
 
     // Training loop
-    for (int epoch = 0; epoch < 2000; epoch++) {
+    for (int epoch = 0; epoch < 1000; epoch++) {
         double total_loss = 0;
         // Important: Shuffle data to help generalization
         std::shuffle(train_data.begin(), train_data.end(), g);
