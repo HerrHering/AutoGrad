@@ -1,5 +1,6 @@
 #include <MUtils.hpp>
 #include <NN.hpp>
+#include <DataUtils.hpp>
 
 using namespace MUtils;
 using namespace NN;
@@ -18,24 +19,22 @@ struct WdbcRecord {
 // Simple parser logic
 std::vector<WdbcRecord> loadWdcb(std::string filename) {
     std::vector<WdbcRecord> data;
-    std::ifstream file(filename);
-    std::string line;
-    
-    while (std::getline(file, line)) {
-        std::stringstream ss(line);
-        std::string val;
+
+    // ID, Label(M/B), 30 features
+    auto source_data = DUtils::read_csv(filename);
+
+    for (auto& row : source_data.rows) {
         WdbcRecord record;
-        std::getline(ss, val, ','); // ID
-        std::getline(ss, val, ','); // Label
-        if (val == "M") record.label.atr(0) = 1.0f; // M
+        // Set label
+        if (row[1] == "M") record.label.atr(0) = 1.0f; // M
         else record.label.atr(1) = 1.0f; // B
-        // Features
-        for (int i = 0; i < 30; ++i) {
-            std::getline(ss, val, ',');
-            record.features.atr(i) = std::stof(val);
+        // Set features
+        for (int i = 2; i < (int)row.size(); i++) {
+            record.features.atr(i-2) = std::stof(row[i]);
         }
         data.push_back(record);
     }
+
     return data;
 }
 void model_scores(const std::vector<WdbcRecord>& test_data, auto network) {
@@ -83,35 +82,11 @@ void model_scores(const std::vector<WdbcRecord>& test_data, auto network) {
         std::cout << name << " | TPR: " << TPR << " | TNR: " << TNR << "\n";
     }
 }
+
 void minMaxScale(std::vector<WdbcRecord>& data) {
-    if (data.empty()) return;
-
-    int num_features = 30;
-    std::vector<float> min_vals(num_features, std::numeric_limits<float>::max());
-    std::vector<float> max_vals(num_features, std::numeric_limits<float>::lowest());
-
-    // 1. Pass through the data to find Min and Max for each feature
-    for (const auto& record : data) {
-        for (int i = 0; i < num_features; ++i) {
-            float val = record.features.atc(i); // Using your atc() const accessor
-            if (val < min_vals[i]) min_vals[i] = val;
-            if (val > max_vals[i]) max_vals[i] = val;
-        }
-    }
-
-    // 2. Pass through the data again to scale every value
-    for (auto& record : data) {
-        for (int i = 0; i < num_features; ++i) {
-            float range = max_vals[i] - min_vals[i];
-            
-            // Handle edge case: if min == max, range is 0. Set feature to 0.
-            if (range > 0.0f) {
-                float original = record.features.atc(i);
-                record.features.atr(i) = (original - min_vals[i]) / range;
-            } else {
-                record.features.atr(i) = 0.0f; 
-            }
-        }
+    for (int i = 0; i < data[0].features.dim; i++) {
+        auto col = DUtils::getColumnAs(data, [i](WdbcRecord& row) -> float& { return row.features.atr(i); });
+        DUtils::normalize_minMaxScale(col);
     }
 }
 
