@@ -11,6 +11,32 @@ using namespace NN;
 #include <iostream>
 #include <colors.hpp>
 
+// Print optimization information banner
+void printOptimizationInfo() {
+    std::cout << CYAN << "\n[Optimization Backend]\n" << RESET;
+    
+    // Print Eigen version
+    std::cout << "Eigen Version: " << EIGEN_WORLD_VERSION << "."
+              << EIGEN_MAJOR_VERSION << "."
+              << EIGEN_MINOR_VERSION << "\n";
+    
+    // Detect SIMD support
+    std::string simd_info = "Scalar (no SIMD)";
+    #if defined(EIGEN_VECTORIZE_AVX2)
+        simd_info = "AVX2 enabled";
+    #elif defined(EIGEN_VECTORIZE_AVX)
+        simd_info = "AVX enabled";
+    #elif defined(EIGEN_VECTORIZE_SSE2)
+        simd_info = "SSE2 enabled";
+    #endif
+    std::cout << "SIMD Support: " << simd_info << "\n";
+    
+    // Print additional optimization features
+    std::cout << "Expression Templates: Active\n";
+    std::cout << "Math Library: Eigen (column-major, BLAS-optimized)\n";
+    std::cout << CYAN << "\n" << RESET;
+}
+
 // Data loading
 struct WdbcRecord {
     Vector features{30};
@@ -46,10 +72,10 @@ void model_scores(const std::vector<WdbcRecord>& test_data, auto network) {
         auto prediction = network.forward(sample.features);
         
         // Get the index of the highest value (Argmax)
-        int predicted_label = std::distance(prediction.data.data.begin(), 
-                                            std::max_element(prediction.data.data.begin(), prediction.data.data.end()));
-        int true_label = std::distance(sample.label.data.data.begin(), 
-                                            std::max_element(sample.label.data.data.begin(), sample.label.data.data.end()));
+        int predicted_label = std::distance(prediction.data.begin(), 
+                                            std::max_element(prediction.data.begin(), prediction.data.end()));
+        int true_label = std::distance(sample.label.data.begin(), 
+                                            std::max_element(sample.label.data.begin(), sample.label.data.end()));
         
         confusion_matrix[true_label][predicted_label]++;
     }
@@ -97,6 +123,9 @@ int main() {
     std::cout << "Release mode enabled." << std::endl;
 #endif
 
+    // Print optimization backend information
+    printOptimizationInfo();
+
     Network network{
         make_layer<ActivationType::ReLU>(30, 16),
         make_layer<ActivationType::ReLU>(16, 16),
@@ -122,7 +151,7 @@ int main() {
     std::vector<WdbcRecord> test_data(wdbc_data.begin() + train_size, wdbc_data.end());
 
     // Training loop
-    for (int epoch = 0; epoch < 1000; epoch++) {
+    for (int epoch = 0; epoch < 1001; epoch++) {
         double total_loss = 0;
         // Important: Shuffle data to help generalization
         std::shuffle(train_data.begin(), train_data.end(), g);

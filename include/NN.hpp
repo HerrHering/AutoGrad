@@ -26,7 +26,7 @@ namespace NN {
             
             std::normal_distribution<float> dist(0.0f, stddev);
 
-            for (auto& w : weights.data) {
+            for (auto& w : weights) {
                 w = dist(gen);
             }
 
@@ -89,7 +89,7 @@ namespace NN {
             }
 
             // dL/da' = (dL/da * da/dz) * dz/da' <- W = W^T * delta
-            #pragma message("tmul() is not implemented for vector arguments yet. This might be slower.")
+            // Using Eigen's optimized operations: .transpose() is lazy (no copy), .noalias() is implicit
             return layer_backward_res{
                 .dL_da = Vector(MUtils::tmul(weights, delta.data)),
                 .d_weights = MUtils::mulo(delta, last_input),
@@ -139,9 +139,9 @@ namespace NN {
                         auto& layer = std::get<sizeof...(Layers) - 1 - Is>(layers);
                         layer_backward_res grads = layer.backward(loss_grad);
 
-                        // Update parameters
-                        layer.weights = layer.weights - learning_rate * grads.d_weights;
-                        layer.biases = layer.biases - learning_rate * grads.d_biases;
+                        // Update parameters using Eigen's .noalias() for efficiency (avoids temp matrix allocation)
+                        layer.weights.mat.noalias() -= learning_rate * grads.d_weights.mat;
+                        layer.biases.data.mat.noalias() -= learning_rate * grads.d_biases.data.mat;
                         // Propagate error
                         loss_grad = std::move(grads.dL_da);
                     }()

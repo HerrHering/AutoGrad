@@ -6,17 +6,20 @@ set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 # -----------------------------------------------------------------------------
-# Fetch and Build raylib
+# Fetch and Build Eigen3
 # -----------------------------------------------------------------------------
-# include(FetchContent)
+include(FetchContent)
 
-# FetchContent_Declare(
-#   raylib
-#   GIT_REPOSITORY https://github.com/raysan5/raylib.git
-#   GIT_TAG master # You can pin this to a specific version if you prefer
-# )
+FetchContent_Declare(
+  Eigen
+  GIT_REPOSITORY https://gitlab.com/libeigen/eigen.git
+  GIT_TAG 3.4.0
+)
 
-# FetchContent_MakeAvailable(raylib)
+FetchContent_MakeAvailable(Eigen)
+
+# Get Eigen source directory for include path
+FetchContent_GetProperties(Eigen SOURCE_DIR EIGEN_SOURCE_DIR)
 
 # -----------------------------------------------------------------------------
 # Project Sources and Executable
@@ -32,6 +35,12 @@ add_executable(${EXE_NAME} ${SOURCE_FILES})
 # ---------------------------------------------
 # Set include path for headers
 target_include_directories(${EXE_NAME} PUBLIC include)
+# Add Eigen include directory
+target_include_directories(${EXE_NAME} PUBLIC ${EIGEN_SOURCE_DIR})
+# Link Eigen library if available, otherwise just include path
+if(TARGET Eigen3::Eigen)
+    target_link_libraries(${EXE_NAME} PUBLIC Eigen3::Eigen)
+endif()
 # ---------------------------------------------
 
 add_custom_target(copy_assets ALL
@@ -61,12 +70,21 @@ add_dependencies(${EXE_NAME} copy_assets)
 if(MSVC)
     # Warning level 4, treat warnings as errors
     target_compile_options(${EXE_NAME} PRIVATE /W4 /WX)
+    # Enable AVX2 for MSVC
+    target_compile_options(${EXE_NAME} PRIVATE /arch:AVX2)
 else()
     # Enable a good set of warnings and treat them as errors for our code
     target_compile_options(${EXE_NAME} PRIVATE -Wall -Wextra -Wpedantic -Werror)
     
     # Add debug information for our code
     target_compile_options(${EXE_NAME} PRIVATE -g)
+    
+    # Enable CPU-specific optimizations: AVX2 for broad compatibility, or -march=native for maximum performance
+    # Option 1: AVX2 (recommended - good balance, works on most modern CPUs)
+    # target_compile_options(${EXE_NAME} PRIVATE -mavx2)
+    
+    # Option 2: Uncomment below for maximum CPU-specific optimization (AVX-512 on your machine)
+    target_compile_options(${EXE_NAME} PRIVATE -march=native)
 endif()
 
 # -----------------------------------------------------------------------------

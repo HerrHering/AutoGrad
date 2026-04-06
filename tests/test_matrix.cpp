@@ -7,12 +7,12 @@ using namespace MUtils;
 void validate_matrix(const Matrix& result, const Matrix& expected) {
     REQUIRE(result.R == expected.R);
     REQUIRE(result.C == expected.C);
-    REQUIRE(result.data.size() == expected.data.size());
+    REQUIRE(result.size() == expected.size());
 
-    for (size_t i = 0; i < expected.data.size(); ++i) {
+    for (size_t i = 0; i < expected.size(); ++i) {
         // INFO prints the index only if the test fails, helping you debug
         //INFO("Error at index " << i); 
-        REQUIRE_THAT(result.data.at(i), Catch::Matchers::WithinRel(expected.data.at(i), 0.001f));
+        REQUIRE_THAT(result.at(i), Catch::Matchers::WithinRel(expected.at(i), 0.001f));
     }
 }
 
